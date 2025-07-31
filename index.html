@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WooTalk 自動連線程式</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #ecf0f1;
+            border-bottom: 1px solid #bdc3c7;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        input, button, select {
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            cursor: pointer;
+            border: none;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .status.connecting {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .status.connected {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .status.disconnected {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .main-content {
+            display: flex;
+            height: 600px;
+        }
+        
+        .iframe-container {
+            flex: 1;
+            border-right: 1px solid #bdc3c7;
+        }
+        
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .chat-panel {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+            border-right: 1px solid #bdc3c7;
+        }
+        
+        .chat-header {
+            padding: 15px;
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        
+        .message.user {
+            background: #3498db;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .message.partner {
+            background: #ecf0f1;
+            color: #2c3e50;
+            margin-right: auto;
+        }
+        
+        .message.system {
+            background: #f39c12;
+            color: white;
+            text-align: center;
+            margin: 0 auto;
+            font-size: 12px;
+        }
+        
+        .chat-input-area {
+            padding: 15px;
+            background: #ecf0f1;
+            border-top: 1px solid #bdc3c7;
+        }
+        
+        .chat-input-area input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .chat-input-area button {
+            width: 100%;
+            padding: 8px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 5px;
+        }
+        
+        .chat-input-area button:hover {
+            background: #229954;
+        }
+        
+        .chat-input-area button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .chat-input-area .disconnect-btn {
+            background: #e74c3c;
+        }
+        
+        .chat-input-area .disconnect-btn:hover {
+            background: #c0392b;
+        }
+        
+        .chat-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .log-panel {
+            width: 300px;
+            padding: 20px;
+            background: #f8f9fa;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            border-left: 4px solid;
+        }
+        
+        .log-entry.info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        
+        .log-entry.success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .log-entry.warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        
+        .log-entry.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .stats {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .stats h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 WooTalk 自動連線程式</h1>
+            <p>自動連線並篩選聊天對象</p>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="targetUrl">目標網址：</label>
+                <input type="text" id="targetUrl" value="https://wootalk.today/key/%E6%88%90%E4%BA%BA%E6%A8%A1%E5%BC%8F" style="width: 60%;">
+            </div>
+            
+            <div class="control-group">
+                <label for="initialMessage">初始訊息：</label>
+                <input type="text" id="initialMessage" value="人夫" style="width: 200px;">
+            </div>
+            
+            <div class="control-group">
+                <label for="rejectKeywords">拒絕關鍵字（以逗號分隔）：</label>
+                <input type="text" id="rejectKeywords" value="男,男生" style="width: 300px;">
+            </div>
+            
+            <div class="control-group">
+                <label for="acceptKeywords">接受關鍵字（以逗號分隔）：</label>
+                <input type="text" id="acceptKeywords" value="女,女生,人妻,hi" style="width: 300px;">
+                <span style="font-size: 12px; color: #7f8c8d; margin-left: 10px;">遇到這些關鍵字時開啟新分頁</span>
+            </div>
+            
+            <div class="control-group">
+                <label for="autoReconnectDelay">重新連線延遲（秒）：</label>
+                <input type="number" id="autoReconnectDelay" value="3" min="1" max="30" style="width: 100px;">
+            </div>
+            
+            <div class="control-group">
+                <label for="autoTransfer">🌟 遇到接受關鍵字時的動作：</label>
+                <select id="chatMode" style="width: 200px;">
+                    <option value="chat">💬 啟用即時對話</option>
+                    <option value="newTab">🌐 開啟新分頁</option>
+                </select>
+                <span style="font-size: 12px; color: #7f8c8d; margin-left: 10px;">選擇處理方式</span>
+            </div>
+            
+            <div class="control-group">
+                <button id="popupTestBtn" onclick="testPopupBlocking()" style="background: #9b59b6;">🔍 測試彈出視窗設定</button>
+                <span style="font-size: 12px; color: #7f8c8d; margin-left: 10px;">檢查瀏覽器是否允許彈出視窗</span>
+            </div>
+            
+            <button id="startBtn" onclick="startAutoConnection()">🚀 開始自動連線</button>
+            <button id="stopBtn" onclick="stopAutoConnection()" disabled>⏹️ 停止</button>
+            <button id="clearLogBtn" onclick="clearLog()">🗑️ 清除日誌</button>
+        </div>
+        
+        <div class="status" id="status">準備就緒</div>
+        
+        <div class="main-content">
+            <div class="iframe-container">
+                <iframe id="wootalkFrame" src="about:blank"></iframe>
+            </div>
+            
+            <div class="chat-panel" id="chatPanel">
+                <div class="chat-header">
+                    💬 即時對話
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message system">等待連線中...</div>
+                </div>
+                <div class="chat-input-area chat-disabled" id="chatInputArea">
+                    <input type="text" id="chatInput" placeholder="輸入訊息..." maxlength="200">
+                    <button onclick="sendMessage()" id="sendBtn">📤 發送訊息</button>
+                    <button onclick="disconnectChat()" class="disconnect-btn" id="disconnectBtn">❌ 離開對話</button>
+                </div>
+            </div>
+            
+            <div class="log-panel">
+                <div class="stats">
+                    <h4>📊 統計資料</h4>
+                    <div class="stat-item">
